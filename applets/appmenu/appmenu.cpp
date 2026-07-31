@@ -4,6 +4,7 @@
 #include <QProcess>
 #include <QSettings>
 #include <QRegularExpression>
+#include <QDebug>
 
 void AppMenuApplet::externalWidgetSetup() {
     mExternalWidget = new QPushButton();
@@ -187,21 +188,23 @@ App AppMenuApplet::readDesktopEntry(QString desktopEntryPath) {
 }
 
 void AppMenuApplet::execApp(QString exec) {
-    QObject* parent = mParentPanel->mExecHolder;
-    QProcess* process = new QProcess(parent);
-
     // Удаляем все токены вида %U, %f, %F, %u, %c, %i, %k, %v, %m
-    // вместе с окружающими пробелами
-    static QRegularExpression re("\\s*%[a-zA-Z]\\s*");
+    // вместе с окружающими пробелами и кавычками
+    QRegularExpression re("\\s*%[a-zA-Z]\\s*");
     exec.remove(re);
+    // Удаляем пустые кавычки, оставшиеся после удаления токенов (например, " %u" → "" )
+    exec.remove("\"\"");
     exec = exec.trimmed();
 
     if (exec.isEmpty()) {
-        // Если после очистки ничего не осталось, ничего не делаем
-        delete process;
+        qWarning() << "Empty exec command, aborting";
         return;
     }
 
+    qDebug() << "Executing:" << exec; // отладка
+
+    QObject* parent = mParentPanel->mExecHolder;
+    QProcess* process = new QProcess(parent);
     process->start(exec);
     mInternalWidget->hide();
 }
