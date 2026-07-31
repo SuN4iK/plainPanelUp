@@ -3,6 +3,7 @@
 #include <QIcon>
 #include <QProcess>
 #include <QSettings>
+#include <QRegularExpression>
 
 void AppMenuApplet::externalWidgetSetup() {
     mExternalWidget = new QPushButton();
@@ -188,14 +189,19 @@ App AppMenuApplet::readDesktopEntry(QString desktopEntryPath) {
 void AppMenuApplet::execApp(QString exec) {
     QObject* parent = mParentPanel->mExecHolder;
     QProcess* process = new QProcess(parent);
-    // Удаляем завершающие %-коды, если они есть (например, " %", " %c", " %f", etc.)
-    // Просто удаляем любые завершающие пробелы и %-код
-    while (exec.endsWith(" %") || exec.endsWith(" %c") || exec.endsWith(" %f") ||
-           exec.endsWith(" %F") || exec.endsWith(" %u") || exec.endsWith(" %U") ||
-           exec.endsWith(" %i") || exec.endsWith(" %k") || exec.endsWith(" %v") ||
-           exec.endsWith(" %m")) {
-        exec.chop(2);
+
+    // Удаляем все токены вида %U, %f, %F, %u, %c, %i, %k, %v, %m
+    // вместе с окружающими пробелами
+    static QRegularExpression re("\\s*%[a-zA-Z]\\s*");
+    exec.remove(re);
+    exec = exec.trimmed();
+
+    if (exec.isEmpty()) {
+        // Если после очистки ничего не осталось, ничего не делаем
+        delete process;
+        return;
     }
+
     process->start(exec);
     mInternalWidget->hide();
 }
